@@ -43,7 +43,7 @@ export default function Home() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          Welcome to EliteCart
+          Welcome to Pink-Island
         </motion.h1>
         <motion.p
           className="text-lg text-pink-200 font-medium"
