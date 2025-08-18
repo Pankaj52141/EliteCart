@@ -5,7 +5,6 @@ import Shop from "@pages/Shop";
 import Cart from "@pages/Cart";
 import Admin from "@pages/Admin";
 import Products from "@pages/admin/Products";
-import AddProduct from "@pages/admin/AddProduct";
 import Users from "@pages/admin/Users";
 import Orders from "@pages/admin/Orders";
 import Reports from "@pages/admin/Reports";
