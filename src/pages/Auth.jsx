@@ -17,6 +17,73 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [loadingOtp, setLoadingOtp] = useState(false);
+  const [loadingVerify, setLoadingVerify] = useState(false);
+
+  const handleSendOtp = async () => {
+    setError("");
+    setLoadingOtp(true);
+    try {
+      // Check if email is already registered in Firebase Auth
+      const checkRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${process.env.REACT_APP_FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY || "AIzaSyAlzUeYPdKFlTDwkWO5Xt_9foN3BwmbpK0"}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: "dummy", returnSecureToken: true }),
+      });
+      const checkData = await checkRes.json();
+      if (checkData.error && checkData.error.message !== "EMAIL_NOT_FOUND") {
+        setError("Email is already registered. Please log in.");
+        setLoadingOtp(false);
+        return;
+      }
+      if (!checkData.error) {
+        setError("Email is already registered. Please log in.");
+        setLoadingOtp(false);
+        return;
+      }
+      // If not registered, send OTP
+      const res = await fetch("/api/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOtpSent(true);
+        setError("");
+      } else {
+        setError(data.error || "Failed to send OTP.");
+      }
+    } catch (err) {
+      setError("Failed to send OTP.");
+    }
+    setLoadingOtp(false);
+  };
+
+  const handleVerifyOtp = async () => {
+    setError("");
+    setLoadingVerify(true);
+    try {
+      const res = await fetch("/api/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      });
+      const data = await res.json();
+      if (!data.error) {
+        setOtpVerified(true);
+        setError("");
+      } else {
+        setError(data.error || "OTP verification failed.");
+      }
+    } catch (err) {
+      setError("OTP verification failed.");
+    }
+    setLoadingVerify(false);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,8 +98,11 @@ export default function Auth() {
           setError("Please enter your name.");
           return;
         }
+        if (!otpVerified) {
+          setError("Please verify your email with OTP before signing up.");
+          return;
+        }
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        // Save name to Firestore
         await setDoc(doc(db, "users", userCredential.user.uid), {
           uid: userCredential.user.uid,
           email,
@@ -40,7 +110,6 @@ export default function Auth() {
         });
         alert("Account created successfully");
       }
-      // ✅ Navigate to dashboard and replace auth in history
       navigate("/dashboard", { replace: true });
     } catch (err) {
       setError(err.message);
@@ -63,23 +132,74 @@ export default function Auth() {
         {error && <p className="text-red-500 text-sm text-center bg-red-100/10 rounded p-2 mb-2">{error}</p>}
         <form className="space-y-4" onSubmit={handleSubmit}>
           {!isLogin && (
+            <>
+              <input
+                type="text"
+                placeholder="Name"
+                className="w-full px-4 py-2 rounded-full bg-white/10 border border-pink-600/30 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 font-sans"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  placeholder="Email"
+                  className="w-full px-4 py-2 rounded-full bg-white/10 border border-pink-600/30 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 font-sans"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setOtpSent(false);
+                    setOtpVerified(false);
+                    setOtp("");
+                  }}
+                  required
+                  disabled={otpSent}
+                />
+                <button
+                  type="button"
+                  className="bg-pink-500 hover:bg-pink-700 text-white px-4 py-2 rounded-full font-bold shadow-lg transition"
+                  onClick={handleSendOtp}
+                  disabled={loadingOtp || !email || otpSent}
+                >
+                  {loadingOtp ? "Sending..." : otpSent ? "OTP Sent" : "Send OTP"}
+                </button>
+              </div>
+              {otpSent && !otpVerified && (
+                <div className="flex gap-2 mt-2">
+                  <input
+                    type="text"
+                    placeholder="Enter OTP"
+                    className="w-full px-4 py-2 rounded-full bg-white/10 border border-pink-600/30 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 font-sans"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="bg-pink-500 hover:bg-pink-700 text-white px-4 py-2 rounded-full font-bold shadow-lg transition"
+                    onClick={handleVerifyOtp}
+                    disabled={loadingVerify || !otp}
+                  >
+                    {loadingVerify ? "Verifying..." : "Verify OTP"}
+                  </button>
+                </div>
+              )}
+              {otpVerified && (
+                <p className="text-green-400 text-sm text-center">Email verified! You can now sign up.</p>
+              )}
+            </>
+          )}
+          {isLogin && (
             <input
-              type="text"
-              placeholder="Name"
+              type="email"
+              placeholder="Email"
               className="w-full px-4 py-2 rounded-full bg-white/10 border border-pink-600/30 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 font-sans"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           )}
-          <input
-            type="email"
-            placeholder="Email"
-            className="w-full px-4 py-2 rounded-full bg-white/10 border border-pink-600/30 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 font-sans"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
           <input
             type="password"
             placeholder="Password"
@@ -90,7 +210,8 @@ export default function Auth() {
           />
           <button
             type="submit"
-            className="w-full bg-pink-600 hover:bg-pink-700 text-white py-2 rounded-full font-bold shadow-lg transition"
+            className={`w-full bg-pink-600 hover:bg-pink-700 text-white py-2 rounded-full font-bold shadow-lg transition ${!isLogin && !otpVerified ? "opacity-50 cursor-not-allowed" : ""}`}
+            disabled={!isLogin && !otpVerified}
           >
             {isLogin ? "Login" : "Sign Up"}
           </button>
