@@ -1,10 +1,15 @@
 import crypto from 'crypto';
-import { createClient } from '@supabase/supabase-js';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const serviceAccount = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+if (!global._firebaseApp) {
+  global._firebaseApp = initializeApp({
+    credential: cert(serviceAccount),
+    projectId: serviceAccount.project_id,
+  });
+}
+const db = getFirestore();
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -17,26 +22,24 @@ export default async function handler(req, res) {
   }
 
   const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
-
-  const { data, error } = await supabase
-    .from('otps')
-    .select('*')
-    .eq('email', email)
-    .eq('otp', hashedOtp)
-    .order('expiry', { ascending: false })
-    .limit(1);
-
-  if (error || !data || data.length === 0) {
-    return res.status(400).json({ error: 'Invalid OTP' });
+  try {
+    const docRef = db.collection('otps').doc(email);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return res.status(400).json({ error: 'Invalid OTP' });
+    }
+    const record = docSnap.data();
+    if (record.otp !== hashedOtp) {
+      return res.status(400).json({ error: 'Invalid OTP' });
+    }
+    if (Date.now() > record.expiry) {
+      return res.status(400).json({ error: 'OTP has expired' });
+    }
+    await docRef.delete();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error.' });
   }
-
-  const record = data[0];
-
-  if (new Date(record.expiry) < new Date()) {
-    return res.status(400).json({ error: 'OTP has expired' });
-  }
-
-  await supabase.from('otps').delete().eq('id', record.id);
 
   res.json({ success: true, message: 'OTP verified' });
 }
