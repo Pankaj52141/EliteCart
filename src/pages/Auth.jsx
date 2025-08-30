@@ -34,28 +34,26 @@ export default function Auth() {
         body: JSON.stringify({ email, password: "dummy", returnSecureToken: true }),
       });
       const checkData = await checkRes.json();
-      if (checkData.error && checkData.error.message !== "EMAIL_NOT_FOUND") {
-        setError("Email is already registered. Please log in.");
-        setLoadingOtp(false);
-        return;
-      }
-      if (!checkData.error) {
-        setError("Email is already registered. Please log in.");
-        setLoadingOtp(false);
-        return;
-      }
-      // If not registered, send OTP
-      const res = await fetch("/api/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setOtpSent(true);
-        setError("");
+      if (checkData.error && checkData.error.message === "EMAIL_NOT_FOUND") {
+        // Email not registered, send OTP
+        const res = await fetch("/api/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setOtpSent(true);
+          setError("");
+        } else {
+          setError(data.error || "Failed to send OTP.");
+        }
+      } else if (!checkData.error) {
+        // Email is registered
+        setError("This email is already registered. Please use the login form or reset your password if you forgot it.");
       } else {
-        setError(data.error || "Failed to send OTP.");
+        // Other errors
+        setError("Failed to check email. Please try again later.");
       }
     } catch (err) {
       setError("Failed to send OTP.");
