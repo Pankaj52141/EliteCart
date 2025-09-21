@@ -138,6 +138,14 @@ export default function Navbar() {
               >
                 🛒 Cart
               </NavLink>
+
+              <NavLink 
+                to="/wishlist" 
+                className="flex items-center gap-2 px-4 py-3 rounded-lg bg-white/10 hover:bg-pink-600/30 transition font-semibold text-white text-base md:text-base w-full md:w-auto md:bg-transparent md:py-2" 
+                onClick={() => setMenuOpen(false)}
+              >
+                ❤️ Wishlist
+              </NavLink>
               
               {user && user.email === "pankajjaiswal816117@gmail.com" && (
                 <NavLink

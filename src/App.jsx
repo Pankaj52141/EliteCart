@@ -12,6 +12,7 @@ import Dashboard from "@pages/Dashboard";
 import Profile from "@pages/Profile";
 import OrderDetails from "./pages/OrderDetails";
 import Checkout from "@pages/Checkout";
+import Wishlist from "@pages/Wishlist";
 
 import ProtectedRoute from "@components/ProtectedRoute";
 import PublicRoute from "@components/PublicRoute";
@@ -61,6 +62,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/order/:orderId" element={<OrderDetails />} />
     <Route path="/admin" element={<Admin />} />
            <Route path="/checkout" element={<Checkout />} />
