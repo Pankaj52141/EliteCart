@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../../firebase";
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
@@ -40,13 +40,19 @@ export default function Orders() {
 
   const handleUpdateStatus = async (e) => {
     e.preventDefault();
+    if (!editStatus.trim()) {
+      setError("Please select a valid status.");
+      return;
+    }
     try {
       await updateDoc(doc(db, "orders", editId), { status: editStatus });
       setOrders(orders.map(o => o.id === editId ? { ...o, status: editStatus } : o));
       setEditId(null);
       setEditStatus("");
+      setError(""); // Clear any previous errors
     } catch (err) {
-      setError("Failed to update order status.");
+      console.error("Error updating order status:", err);
+      setError(`Failed to update order status: ${err.message}`);
     }
   };
 
@@ -89,12 +95,14 @@ export default function Orders() {
                       value={editStatus}
                       onChange={e => setEditStatus(e.target.value)}
                       className="w-full px-4 py-2 rounded bg-white/10 text-white border border-white/20"
+                      required
                     >
-                      <option value="pending">Pending</option>
-                      <option value="processing">Processing</option>
-                      <option value="shipped">Shipped</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="cancelled">Cancelled</option>
+                      <option value="">Select Status</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Processing">Processing</option>
+                      <option value="Shipped">Shipped</option>
+                      <option value="Delivered">Delivered</option>
+                      <option value="Cancelled">Cancelled</option>
                     </select>
                     <button type="submit" className="w-full bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl text-white font-bold">Update Status</button>
                     <button type="button" onClick={() => { setEditId(null); setEditStatus(""); }} className="w-full mt-2 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-xl text-white font-bold">Cancel</button>

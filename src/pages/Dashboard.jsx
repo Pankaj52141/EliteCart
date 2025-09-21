@@ -102,39 +102,65 @@ export default function Dashboard() {
   }, [user, error]);
 
   const navigate = useNavigate();
+  
+  const totalSpent = orders.reduce((total, order) => {
+    return total + (order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0);
+  }, 0);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-600 via-purple-700 to-blue-900 p-0 relative overflow-hidden">
-      {/* Glowing gradient background with blur and depth */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute top-0 left-0 w-2/3 h-2/3 bg-pink-400 opacity-30 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 right-0 w-1/2 h-1/2 bg-purple-500 opacity-30 rounded-full blur-2xl animate-pulse" />
-        <div className="absolute top-1/2 left-1/2 w-1/3 h-1/3 bg-blue-500 opacity-20 rounded-full blur-2xl animate-pulse" />
-      </div>
-      <div className="relative z-10 w-full max-w-xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold text-pink-500 mb-4 md:mb-0">Dashboard</h1>
+          {role === "admin" && (
+            <button
+              onClick={() => navigate("/admin")}
+              className="bg-pink-600 hover:bg-pink-700 px-6 py-2 rounded-lg font-semibold transition"
+            >
+              Admin Panel
+            </button>
+          )}
+        </div>
+
         {error && (
-          <div className="text-red-500 bg-red-100/20 p-2 rounded mb-4">
+          <div className="text-red-500 bg-red-100/20 p-4 rounded-lg mb-6">
             {error}
           </div>
         )}
-        {/* Glassy, floating, glowing card */}
-        <div className="bg-white/10 border-4 border-pink-400/40 rounded-3xl shadow-2xl p-10 md:p-14 mx-auto text-center space-y-8 flex flex-col items-center backdrop-blur-2xl animate-float">
-          <img
-            src={
-              role === "admin"
-                ? "/photo.jpg"
-                : profileImage || user?.photoURL || "https://ui-avatars.com/api/?name=" + encodeURIComponent(user?.name || user?.displayName || "User") + "&background=random"
-            }
-            alt={user?.name || user?.displayName || "Profile"}
-            className="w-28 h-28 rounded-full border-4 border-pink-400 shadow-xl neon-glow mx-auto"
-            loading="lazy"
-          />
-          <button
-            className="mt-4 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 px-6 py-2 rounded-full text-white font-bold shadow-lg neon-glow transition duration-300"
-            onClick={() => document.getElementById('profile-image-input').click()}
-            disabled={role === "admin"}
-          >
-            Change Image
-          </button>
+
+        {/* Profile Section */}
+        <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="relative">
+              <img
+                src={
+                  role === "admin"
+                    ? "/photo.jpg"
+                    : profileImage || user?.photoURL || "https://ui-avatars.com/api/?name=" + encodeURIComponent(user?.name || user?.displayName || "User") + "&background=random"
+                }
+                alt={user?.name || user?.displayName || "Profile"}
+                className="w-24 h-24 rounded-full border-4 border-pink-400 shadow-xl"
+                loading="lazy"
+              />
+              {role !== "admin" && (
+                <button
+                  className="absolute bottom-0 right-0 bg-pink-600 hover:bg-pink-700 p-2 rounded-full text-xs"
+                  onClick={() => document.getElementById('profile-image-input').click()}
+                >
+                  📷
+                </button>
+              )}
+            </div>
+            <div className="text-center md:text-left">
+              <h2 className="text-3xl font-bold text-white mb-2">
+                Welcome, {user?.name || user?.displayName || "User"}!
+              </h2>
+              <p className="text-gray-400 mb-1">Email: {user?.email}</p>
+              <p className="text-gray-400 mb-1">Role: <span className="text-pink-400 font-semibold">{role}</span></p>
+              <p className="text-gray-400">Member since: {new Date(user?.metadata?.creationTime).toLocaleDateString()}</p>
+            </div>
+          </div>
           <input
             id="profile-image-input"
             type="file"
@@ -148,7 +174,6 @@ export default function Dashboard() {
                 const reader = new FileReader();
                 reader.onloadend = async () => {
                   setProfileImage(reader.result);
-                  // Upload to Firebase
                   if (user?.uid) {
                     try {
                       const res = await fetch(reader.result);
@@ -169,25 +194,114 @@ export default function Dashboard() {
               }
             }}
           />
-          <h2 className="text-5xl font-extrabold text-white drop-shadow-lg font-sans tracking-tight neon-glow">Welcome, {user?.name || user?.displayName || "User"} 👋</h2>
-          <p className="text-pink-200 text-lg font-mono">
-            UID: <span className="text-white font-bold">{user?.uid || "N/A"}</span>
-          </p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-gradient-to-r from-pink-600 to-purple-600 p-6 rounded-xl text-center">
+            <h3 className="text-2xl font-bold mb-2">{orders.length}</h3>
+            <p className="text-pink-100">Total Orders</p>
+          </div>
+          <div className="bg-gradient-to-r from-green-600 to-blue-600 p-6 rounded-xl text-center">
+            <h3 className="text-2xl font-bold mb-2">₹{totalSpent.toLocaleString()}</h3>
+            <p className="text-green-100">Total Spent</p>
+          </div>
+          <div className="bg-gradient-to-r from-yellow-600 to-red-600 p-6 rounded-xl text-center">
+            <h3 className="text-2xl font-bold mb-2">{orders.filter(o => o.status === "Pending").length}</h3>
+            <p className="text-yellow-100">Pending Orders</p>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8">
+          <h3 className="text-2xl font-bold text-pink-400 mb-4">Quick Actions</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <button
+              onClick={() => navigate("/shop")}
+              className="bg-pink-600 hover:bg-pink-700 p-4 rounded-lg text-center transition"
+            >
+              🛍️<br />Shop Now
+            </button>
+            <button
+              onClick={() => navigate("/cart")}
+              className="bg-blue-600 hover:bg-blue-700 p-4 rounded-lg text-center transition"
+            >
+              🛒<br />View Cart
+            </button>
+            <button
+              onClick={() => navigate("/profile")}
+              className="bg-green-600 hover:bg-green-700 p-4 rounded-lg text-center transition"
+            >
+              👤<br />Edit Profile
+            </button>
+            <button
+              onClick={() => auth.signOut()}
+              className="bg-red-600 hover:bg-red-700 p-4 rounded-lg text-center transition"
+            >
+              🚪<br />Logout
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent Orders */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h3 className="text-2xl font-bold text-pink-400 mb-4">Recent Orders</h3>
+            {orders.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-400 mb-4">No orders yet</p>
+                <button
+                  onClick={() => navigate("/shop")}
+                  className="bg-pink-600 hover:bg-pink-700 px-6 py-2 rounded-lg transition"
+                >
+                  Start Shopping
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-80 overflow-y-auto">
+                {orders.slice(0, 5).map((order, index) => (
+                  <div key={index} className="bg-white/10 p-4 rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-semibold">Order #{index + 1}</span>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        order.status === "Pending" ? "bg-yellow-600" :
+                        order.status === "Delivered" ? "bg-green-600" : "bg-blue-600"
+                      }`}>
+                        {order.status}
+                      </span>
+                    </div>
+                    <p className="text-gray-400 text-sm mb-2">{order.items?.length || 0} items</p>
+                    <p className="text-gray-400 text-sm">
+                      {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString() : "Recent"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Recommendations */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h3 className="text-2xl font-bold text-pink-400 mb-4">Recommended for You</h3>
+            <div className="space-y-4">
+              {recommendations.map((item) => (
+                <div key={item.id} className="bg-white/10 p-4 rounded-lg flex justify-between items-center">
+                  <div>
+                    <h4 className="font-semibold">{item.name}</h4>
+                    <p className="text-pink-400 font-bold">₹{item.price}</p>
+                  </div>
+                  <button
+                    onClick={() => navigate("/shop")}
+                    className="bg-pink-600 hover:bg-pink-700 px-4 py-2 rounded-lg text-sm transition"
+                  >
+                    View
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-      {/* Floating animation keyframes and neon glow utility */}
-      <style>{`
-        .animate-float {
-          animation: float 3s ease-in-out infinite;
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-16px); }
-        }
-        .neon-glow {
-          box-shadow: 0 0 16px 2px #ec4899, 0 0 32px 4px #a78bfa;
-        }
-      `}</style>
     </div>
   );
 }
